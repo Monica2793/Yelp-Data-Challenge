@@ -1,0 +1,18 @@
+from pyspark.sql import SQLContext
+sqlContext = SQLContext(sc)
+df_business = sqlContext.read.json("/user/cloudera/yelp_academic_dataset_business.json")
+df_review = sqlContext.read.json("/user/cloudera/yelp_academic_dataset_review.json")
+df_user = sqlContext.read.json("/user/cloudera/yelp_academic_dataset_user.json")
+df_review.registerTempTable("reviews")
+top10=df_user.sort(df_user.review_count.desc())
+top10=top10.limit(10)
+top10.registerTempTable("top10")
+businesses=df_business.select(pyspark.sql.functions.explode(df_business.categories).alias("category"),df_business.business_id,df_business.stars,df_business.city)
+businesses.registerTempTable("business")
+result=sqlContext.sql("select AVG(reviews.stars) as average_stars,reviews.user_id,category from business,reviews,top10 where top10.user_id=reviews.user_id and reviews.business_id=business.business_id group by reviews.user_id,category order by reviews.user_id ASC")
+result.write.mode('append').json("/user/cloudera/output_spark2/Q4spark.json")
+
+
+
+
+

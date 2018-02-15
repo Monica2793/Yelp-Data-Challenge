@@ -1,0 +1,34 @@
+SET elephantbird.jsonloader.nestedLoad 'true';
+
+A = LOAD './yelp_academic_dataset_business.json' USING com.twitter.elephantbird.pig.load.JsonLoader('-nestedLoad=true') AS (yelp: map[]);
+
+business = FOREACH A GENERATE yelp#'categories' as categories, (int)yelp#'review_count' as review_count, yelp#'city' as city, 
+yelp#'state' as state, (float)yelp#'latitude' as latitude, (float)yelp#'longitude' as longitude, (float)yelp#'stars' as stars;
+
+coordinates_business = FILTER business BY (latitude<43.221261) AND (latitude>42.931739) AND (longitude<-89.214450) AND (longitude>-89.610310); 
+
+joined = JOIN coordinates_business by business_id, review by business_id;
+
+businesses = FOREACH joined GENERATE FLATTEN(categories), coordinates_business::stars, coordinates_business::date;
+
+filter_food = FILTER businesses BY categories MATCHES '.*(Food|food).*';
+
+ordered_1 = ORDER filter_food BY stars DESC;
+
+top_ten = LIMIT ordered_1 10;
+
+ordered_2 = ORDER filter_food BY stars ASC;
+
+bottom_ten = LIMIT ordered_2 10;
+
+top_bottom_20 = UNION top_ten, bottom_ten;
+
+top_bottom = FOREACH top_bottom_20 GENERATE business.date, stars, categories;
+
+joined2 = FOREACH top_bottom GENERATE SUBSTRING(date,5,7) as month, stars;
+
+filter_food2 = FILTER joined2 BY (month matches '01|02|03|04|05|06');
+
+result_ordered = ORDER filter_food2 BY stars DESC;
+
+store result_ordered into './FinalQ57';

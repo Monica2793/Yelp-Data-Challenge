@@ -1,0 +1,21 @@
+from pyspark.sql import SQLContext
+sqlContext = SQLContext(sc)
+df_business = sqlContext.read.json("/user/cloudera/yelp_academic_dataset_business.json")
+df_review = sqlContext.read.json("/user/cloudera/yelp_academic_dataset_review.json")
+df_business.registerTempTable("business")
+df_review.registerTempTable("reviews")
+area=sqlContext.sql("select business_id,stars from business where latitude > 42.931739 and latitude < 43.221261 and longitude > -89.610310 and longitude < -89.214450")
+top10=area.sort(area.stars.desc())
+top10=top10.limit(10)
+top10.registerTempTable("top10")
+bottom10=area.sort(area.stars.asc())
+bottom10=bottom10.limit(10)
+bottom10.registerTempTable("bottom10")
+reviewmonth=df_review.select(pyspark.sql.functions.year(df_review.date).alias('year'),pyspark.sql.functions.month(df_review.date).alias('month'),df_review.business_id,df_review.stars)
+reviewmonth.registerTempTable("reviewmonth")
+resulttop10=sqlContext.sql("select AVG(reviewmonth.stars) as average_stars,reviewmonth.business_id,reviewmonth.year,reviewmonth.month from reviewmonth,top10 where reviewmonth.business_id=top10.business_id group by reviewmonth.business_id,year,month")
+resultbottom10=sqlContext.sql("select AVG(reviewmonth.stars) as average_stars,reviewmonth.business_id,reviewmonth.year,reviewmonth.month from reviewmonth,bottom10 where reviewmonth.business_id=bottom10.business_id group by reviewmonth.business_id,year,month")
+reviewmonth.business_id=sqlContext.sql(SELECT  FROM Customers
+WHERE City LIKE '%es%';
+resulttop10.write.mode('append').json("/user/cloudera/output_spark2/Q5_top10_spark.json")
+resultbottom10.write.mode('append').json("/user/cloudera/output_spark/Q5_bottom10_spark.json")

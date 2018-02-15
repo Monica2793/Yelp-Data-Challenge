@@ -1,0 +1,9 @@
+from pyspark.sql import SQLContext
+sqlContext = SQLContext(sc)
+df = sqlContext.read.json("/user/cloudera/yelp_academic_dataset_business.json")
+businesses=df.select(pyspark.sql.functions.explode(df.categories).alias("category"),df.business_id,df.review_count,df.city,df.state,df.longitude,df.latitude)
+businesses.registerTempTable("business")
+result=sqlContext.sql("select SUM(review_count) as sum_reviews,city,category from business where latitude > 24.520833 and latitude < 49.384472 and longitude > -124.766667 and longitude < -66.950 and state!='ON' and state!='QC' group by city,category")
+result.write.mode('append').json("/user/cloudera/output_spark/Q1spark.json")
+
+

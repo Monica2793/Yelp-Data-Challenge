@@ -1,0 +1,7 @@
+from pyspark.sql import SQLContext
+sqlContext = SQLContext(sc)
+df = sqlContext.read.json("/user/cloudera/yelp_academic_dataset_business.json")
+businesses=df.select(pyspark.sql.functions.explode(df.categories).alias("category"),df.business_id,df.stars,df.city,df.longitude,df.latitude)
+businesses.registerTempTable("business")
+result=sqlContext.sql("select AVG(stars) as average_stars,city,category from business where latitude > 42.931739 and latitude < 43.221261 and longitude > -89.610310 and longitude < -89.214450 group by city,category order by category ASC, average_stars DESC")
+result.write.mode('append').json("/user/cloudera/output_spark/Q3spark.json")
